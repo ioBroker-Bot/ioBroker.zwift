@@ -91,7 +91,7 @@ When you are not actively riding in Zwift, the adapter sets `isRiding` to `false
 	### **WORK IN PROGRESS**
 -->
 
-### **WORK IN PROGRESS**
+### 0.0.1 (2026-03-02)
 * (Flixhummel) initial release
 
 ## License

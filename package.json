@@ -10,7 +10,10 @@
   "homepage": "https://github.com/Flixhummel/ioBroker.zwift",
   "license": "MIT",
   "keywords": [
-    "zwift training live data"
+    "ioBroker",
+    "zwift",
+    "training",
+    "live data"
   ],
   "repository": {
     "type": "git",
