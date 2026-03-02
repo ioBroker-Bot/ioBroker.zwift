@@ -1,5 +1,5 @@
 {
-	"zwift adapter settings": "Налаштування адаптера для zwift",
-	"option1": "варіант1",
-	"option2": "варіант2"
+	"username": "Zwift Email",
+	"password": "Zwift Password",
+	"pollingInterval": "Polling Interval (seconds)"
 }

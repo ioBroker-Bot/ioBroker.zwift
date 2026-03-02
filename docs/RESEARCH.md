@@ -36,24 +36,17 @@ Zwift App → Zwift API → ioBroker.zwift Adapter → ioBroker State Tree → L
 
 1. **Zwift API Integration**
    - Real-time workout data stream
-   - Metrics: power (watts), cadence (rpm), heart rate (bpm), zone
+   - all available data points
    - Authentication & session management
 
 2. **ioBroker.zwift Adapter**
    - Poll Zwift API for live workout data
-   - Parse and normalize workout metrics
-   - Map metrics to LED commands
+   - Parse and normalize
    - Publish to ioBroker state tree
 
 3. **ioBroker State Tree**
    - Expose workout data as states
-   - Trigger rules/scenes based on zones
-   - Integration point for other adapters
-
-4. **LED Controller**
-   - WLED (recommended) or similar firmware
-   - Addressable LED strips (WS2812B, SK6812, etc.)
-   - MQTT or HTTP control interface
+   - Integration point for other adapters‚
 
 ---
 

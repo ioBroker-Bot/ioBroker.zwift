@@ -1,5 +1,5 @@
 {
-	"zwift adapter settings": "zwift的适配器设置",
-	"option1": "选项1",
-	"option2": "选项2"
+	"username": "Zwift Email",
+	"password": "Zwift Password",
+	"pollingInterval": "Polling Interval (seconds)"
 }
