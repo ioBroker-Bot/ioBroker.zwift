@@ -1,0 +1,88 @@
+{
+	"common": {
+		"name": "zwift",
+		"version": "0.0.1",
+		"news": {
+			"0.0.1": {
+				"en": "initial release",
+				"de": "Erstveröffentlichung",
+				"ru": "Начальная версия",
+				"pt": "lançamento inicial",
+				"nl": "Eerste uitgave",
+				"fr": "Première version",
+				"it": "Versione iniziale",
+				"es": "Versión inicial",
+				"pl": "Pierwsze wydanie",
+				"uk": "Початкова версія",
+				"zh-cn": "首次出版"
+			}
+		},
+		"titleLang": {
+			"en": "zwift",
+			"de": "zwift",
+			"ru": "Цвифт",
+			"pt": "zwift",
+			"nl": "zwift",
+			"fr": "zwift",
+			"it": "zwift",
+			"es": "zwift",
+			"pl": "zwift",
+			"uk": "zwift",
+			"zh-cn": "兹维夫特"
+		},
+		"desc": {
+			"en": "your zwift live training data in iobroker",
+			"de": "Ihre Zwift-Live-Trainingsdaten in iobroker",
+			"ru": "ваши данные обучения zwift в реальном времени в iobroker",
+			"pt": "seus dados de treinamento do zwift live no iobroker",
+			"nl": "uw zwift live trainingsgegevens in iobroker",
+			"fr": "vos données d'entraînement en direct zwift dans iobroker",
+			"it": "i tuoi dati di allenamento zwift live in iobroker",
+			"es": "tus datos de entrenamiento en vivo de zwift en iobroker",
+			"pl": "Twoje dane treningowe Zwift na żywo w iobrokerze",
+			"uk": "ваші дані навчання zwift live в iobroker",
+			"zh-cn": "您在 iobroker 中的 zwift 实时训练数据"
+		},
+		"authors": [
+			"Flixhummel <hummelimages@googlemail.com>"
+		],
+		"keywords": [
+			"zwift training live data"
+		],
+		"licenseInformation": {
+			"type": "free",
+			"license": "MIT"
+		},
+		"platform": "Javascript/Node.js",
+		"icon": "zwift.png",
+		"enabled": true,
+		"extIcon": "https://raw.githubusercontent.com/Flixhummel/ioBroker.zwift/main/admin/zwift.png",
+		"readme": "https://github.com/Flixhummel/ioBroker.zwift/blob/main/README.md",
+		"loglevel": "info",
+		"tier": 3,
+		"mode": "daemon",
+		"type": "health",
+		"compact": true,
+		"connectionType": "cloud",
+		"dataSource": "poll",
+		"adminUI": {
+			"config": "json"
+		},
+		"dependencies": [
+			{
+				"js-controller": ">=6.0.11"
+			}
+		],
+		"globalDependencies": [
+			{
+				"admin": ">=7.0.23"
+			}
+		]
+	},
+	"native": {
+		"option1": true,
+		"option2": "42"
+	},
+	"objects": [],
+	"instanceObjects": []
+}
