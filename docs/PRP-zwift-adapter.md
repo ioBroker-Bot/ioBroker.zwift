@@ -1,7 +1,8 @@
 # PRP: ioBroker.zwift — Zwift Live Workout Data Adapter
 
 **Created:** 2026-03-02
-**Status:** Ready for Implementation
+**Updated:** 2026-03-03
+**Status:** Implemented
 **Confidence Score:** 8/10
 
 ---
@@ -143,19 +144,20 @@ Example JSON response:
 
 Sources: [zwift_hass sensor.py](https://github.com/snicker/zwift_hass/blob/master/custom_components/zwift/sensor.py), [zwift-mobile-api riderStatus.js](https://github.com/Ogadai/zwift-mobile-api/blob/master/src/riderStatus.js), [Speed units issue #23](https://github.com/Ogadai/zwift-mobile-api/issues/23)
 
-| Field | Raw Unit | Target Unit | Conversion | Source |
+| Field | Raw Unit | Target Unit | Conversion | Status |
 |-------|----------|-------------|------------|--------|
-| `speed` | internal | km/h | `raw / 1000000` | zwift_hass: `speed / 1000000.0` → km/h |
-| `cadenceUHz` | µHz | rpm | `raw * 60 / 1000000` | riderStatus.js: `cadenceUHz * 60 / 1000000` |
-| `altitude` | internal | m | `(raw - 9000) / 2 * 0.3048` | zwift_hass: `(alt - 9000) / 2` → feet, ×0.3048 → m |
-| `distance` | internal | km | needs testing — may be cm or m | zwift_hass uses raw float directly |
-| `climbing` | internal | m | needs testing — likely cm, `raw / 100` | not well documented |
+| `speed` | internal | km/h | `raw / 1000000` | confirmed |
+| `cadenceUHz` | µHz | rpm | `raw * 60 / 1000000` | confirmed |
+| `altitude` | internal | m | `(raw - 9000) / 2 * 0.3048` | confirmed |
+| `distance` | internal | km | `raw / 1000` | confirmed (was off by 100x in initial PRP) |
+| `climbing` | internal | m | `raw` direct (already in meters) | confirmed (was off by 100x in initial PRP) |
 | `power` | W | W | direct | confirmed |
 | `heartrate` | bpm | bpm | direct | confirmed |
-| `calories` | kcal | kcal | direct | confirmed |
+| `calories` | kJ | kJ | direct (matches Zwift in-game display) | confirmed (was labeled kcal in initial PRP) |
 | `time` | s | s | direct | confirmed |
+| `progress` | raw | raw | direct (no % unit, raw value exposed) | confirmed |
 
-**WARNING — Unit conversion uncertainty:** The `speed / 1000000 → km/h` and `cadenceUHz * 60 / 1000000 → rpm` conversions are confirmed by multiple sources. The `altitude`, `distance`, and `climbing` conversions are less certain. The implementer should **log raw values during testing** and verify conversions against the Zwift in-game display. Start with the documented conversions and adjust if values look wrong.
+**Implementation note:** The initial PRP had uncertainty around distance, climbing, and calorie conversions. After testing against the Zwift in-game display, the correct conversions are documented above. Distance uses `raw / 1000` (not `/100000`), climbing is already in meters (no division needed), and calories are in kJ (not kcal).
 
 #### Rate Limits
 No official rate limits documented. Community consensus: polling every 5 seconds is safe. Use a single request per poll cycle (no concurrency needed).
@@ -191,7 +193,8 @@ ioBroker.zwift/
 
 #### State Creation
 ```javascript
-await this.setObjectNotExistsAsync("power", {
+// Using extendObjectAsync so metadata changes (units, names) are applied on restart
+await this.extendObjectAsync("power", {
   type: "state",
   common: {
     name: "Current Power",
@@ -204,6 +207,8 @@ await this.setObjectNotExistsAsync("power", {
   native: {},
 });
 ```
+
+**Note:** The implementation uses `extendObjectAsync` instead of `setObjectNotExistsAsync`. This ensures that when units or names are corrected in a new adapter version, the changes are applied automatically on restart without requiring users to delete and recreate objects.
 
 #### State Update (always use `ack: true` for values from API)
 ```javascript
@@ -405,6 +410,7 @@ class Zwift extends utils.Adapter {
     this.on("unload", this.onUnload.bind(this));
     this.zwiftClient = null;
     this.pollingTimer = null;
+    this.ftp = 0; // FTP from Zwift profile, used for power zone calculation
   }
 
   async onReady() {
@@ -420,12 +426,18 @@ class Zwift extends utils.Adapter {
     // 3. Initialize Zwift client
     this.zwiftClient = new ZwiftClient(this.config.username, this.config.password, this.log);
 
-    // 4. Authenticate and get profile
+    // 4. Authenticate, get profile, and read FTP for power zones
     try {
       await this.zwiftClient.authenticate();
       const profile = await this.zwiftClient.getProfile();
       await this.setStateAsync("info.connection", true, true);
       this.log.info(`Connected to Zwift as player ${this.zwiftClient.playerId}`);
+      this.ftp = profile.ftp || 0;
+      if (this.ftp > 0) {
+        this.log.info(`FTP from Zwift profile: ${this.ftp} W`);
+      } else {
+        this.log.warn("No FTP found in Zwift profile, power zones will not be calculated");
+      }
       await this.updateProfileStates(profile);
     } catch (error) {
       this.log.error(`Failed to connect to Zwift: ${error.message}`);
@@ -440,7 +452,7 @@ class Zwift extends utils.Adapter {
   }
 
   async createStates() {
-    // Create all state objects using setObjectNotExistsAsync
+    // Create all state objects using extendObjectAsync (so metadata updates are applied on restart)
     // See full state definition tables above for all states
     // Create a "profile" channel for profile.* states:
     //   await this.setObjectNotExistsAsync("profile", { type: "channel", common: { name: "Zwift Profile" }, native: {} });
@@ -466,20 +478,33 @@ class Zwift extends utils.Adapter {
 
   async updateStates(status) {
     // Convert units and update each state
-    // NOTE: Log raw values during initial testing to verify conversions!
 
     // Core performance metrics
-    await this.setStateAsync("power", { val: status.power || 0, ack: true });
+    const power = status.power || 0;
+    await this.setStateAsync("power", { val: power, ack: true });
+
+    // Power zone calculation (Coggan 6-zone model, FTP from profile)
+    if (this.ftp > 0) {
+      const pctFtp = (power / this.ftp) * 100;
+      let zone = 1;
+      if (pctFtp > 120) zone = 6;
+      else if (pctFtp > 105) zone = 5;
+      else if (pctFtp > 90) zone = 4;
+      else if (pctFtp > 75) zone = 3;
+      else if (pctFtp >= 55) zone = 2;
+      await this.setStateAsync("powerZone", { val: zone, ack: true });
+    }
+
     await this.setStateAsync("heartrate", { val: status.heartrate || 0, ack: true });
     await this.setStateAsync("cadence", { val: Math.round((status.cadenceUHz || 0) * 60 / 1000000), ack: true });
     await this.setStateAsync("speed", { val: Math.round((status.speed || 0) / 1000000 * 10) / 10, ack: true });
 
     // Distance and elevation
-    await this.setStateAsync("distance", { val: Math.round((status.distance || 0) / 100000 * 100) / 100, ack: true });
+    await this.setStateAsync("distance", { val: Math.round((status.distance || 0) / 1000 * 100) / 100, ack: true });
     await this.setStateAsync("altitude", { val: Math.round(((status.altitude || 9000) - 9000) / 2 * 0.3048 * 10) / 10, ack: true });
-    await this.setStateAsync("climbing", { val: Math.round((status.climbing || 0) / 100 * 10) / 10, ack: true });
+    await this.setStateAsync("climbing", { val: Math.round((status.climbing || 0) * 10) / 10, ack: true });
 
-    // Session data
+    // Session data (calories are kJ, matching Zwift in-game display)
     await this.setStateAsync("calories", { val: status.calories || 0, ack: true });
     await this.setStateAsync("time", { val: status.time || 0, ack: true });
     await this.setStateAsync("laps", { val: status.laps || 0, ack: true });
@@ -509,16 +534,31 @@ class Zwift extends utils.Adapter {
     await this.setStateAsync("profile.firstName", { val: profile.firstName || "", ack: true });
     await this.setStateAsync("profile.lastName", { val: profile.lastName || "", ack: true });
     await this.setStateAsync("profile.weight", { val: Math.round((profile.weight || 0) / 100) / 10, ack: true });
-    await this.setStateAsync("profile.height", { val: profile.height || 0, ack: true });
+    await this.setStateAsync("profile.height", { val: Math.round((profile.height || 0) / 10), ack: true });
     await this.setStateAsync("profile.age", { val: profile.age || 0, ack: true });
     await this.setStateAsync("profile.male", { val: !!profile.male, ack: true });
     await this.setStateAsync("profile.countryCode", { val: profile.countryCode || 0, ack: true });
+    await this.setStateAsync("profile.ftp", { val: profile.ftp || 0, ack: true });
     await this.setStateAsync("profile.totalDistance", { val: Math.round((profile.totalDistance || 0) / 100) / 10, ack: true });
     await this.setStateAsync("profile.totalDistanceClimbed", { val: profile.totalDistanceClimbed || 0, ack: true });
     await this.setStateAsync("profile.totalTimeInMinutes", { val: profile.totalTimeInMinutes || 0, ack: true });
     await this.setStateAsync("profile.totalWattHours", { val: profile.totalWattHours || 0, ack: true });
     await this.setStateAsync("profile.totalExperiencePoints", { val: profile.totalExperiencePoints || 0, ack: true });
+    await this.setStateAsync("profile.targetExperiencePoints", { val: profile.targetExperiencePoints || 0, ack: true });
     await this.setStateAsync("profile.achievementLevel", { val: profile.achievementLevel || 0, ack: true });
+    await this.setStateAsync("profile.totalGold", { val: profile.totalGold || 0, ack: true });
+    await this.setStateAsync("profile.totalInKomJersey", { val: profile.totalInKomJersey || 0, ack: true });
+    await this.setStateAsync("profile.totalInSprintersJersey", { val: profile.totalInSprintersJersey || 0, ack: true });
+    await this.setStateAsync("profile.totalInOrangeJersey", { val: profile.totalInOrangeJersey || 0, ack: true });
+    await this.setStateAsync("profile.runAchievementLevel", { val: profile.runAchievementLevel || 0, ack: true });
+    await this.setStateAsync("profile.totalRunDistance", { val: profile.totalRunDistance || 0, ack: true });
+    await this.setStateAsync("profile.totalRunTimeInMinutes", { val: profile.totalRunTimeInMinutes || 0, ack: true });
+    await this.setStateAsync("profile.totalRunExperiencePoints", { val: profile.totalRunExperiencePoints || 0, ack: true });
+    await this.setStateAsync("profile.targetRunExperiencePoints", { val: profile.targetRunExperiencePoints || 0, ack: true });
+    await this.setStateAsync("profile.totalRunCalories", { val: profile.totalRunCalories || 0, ack: true });
+    await this.setStateAsync("profile.streaksCurrentLength", { val: profile.streaksCurrentLength || 0, ack: true });
+    await this.setStateAsync("profile.streaksMaxLength", { val: profile.streaksMaxLength || 0, ack: true });
+    await this.setStateAsync("profile.streaksLastRideTimestamp", { val: profile.streaksLastRideTimestamp || "", ack: true });
     await this.setStateAsync("profile.currentActivityId", { val: profile.currentActivityId || 0, ack: true });
     await this.setStateAsync("profile.powerSource", { val: profile.powerSource || 0, ack: true });
   }
@@ -554,16 +594,17 @@ All states: `read: true`, `write: false`.
 |----------|------|------|------|------|---------------------|
 | `isRiding` | boolean | `indicator` | — | Currently Riding | derived: `true` if status returned, `false` if 404 |
 | `power` | number | `value.power` | W | Current Power | `status.power` direct |
+| `powerZone` | number | `value` | — | Power Zone | Coggan 6-zone model based on FTP from profile (1-6) |
 | `heartrate` | number | `value.health.bpm` | bpm | Heart Rate | `status.heartrate` direct |
 | `cadence` | number | `value` | rpm | Cadence | `status.cadenceUHz * 60 / 1000000` |
 | `speed` | number | `value.speed` | km/h | Speed | `status.speed / 1000000` |
-| `distance` | number | `value.distance` | km | Distance | `status.distance / 100000` (needs verification) |
-| `altitude` | number | `value.gps.elevation` | m | Altitude | `(status.altitude - 9000) / 2 * 0.3048` (needs verification) |
-| `climbing` | number | `value` | m | Total Climbing | `status.climbing / 100` (needs verification) |
-| `calories` | number | `value` | kcal | Calories | `status.calories` direct |
+| `distance` | number | `value.distance` | km | Distance | `status.distance / 1000` |
+| `altitude` | number | `value.gps.elevation` | m | Altitude | `(status.altitude - 9000) / 2 * 0.3048` |
+| `climbing` | number | `value` | m | Total Climbing | `status.climbing` direct (already in meters) |
+| `calories` | number | `value` | kJ | Calories | `status.calories` direct (kJ, matches Zwift display) |
 | `time` | number | `value` | s | Ride Time | `status.time` direct |
 | `laps` | number | `value` | — | Laps Completed | `status.laps` direct |
-| `progress` | number | `value` | % | Route Progress | `status.progress` direct (0-100) |
+| `progress` | number | `value` | — | Route Progress | `status.progress` direct (raw value) |
 | `sport` | number | `value` | — | Sport Type | `status.sport` direct (0=cycling) |
 | `groupId` | number | `value` | — | Group/Event ID | `status.groupId` direct (0=no group) |
 | `x` | number | `value` | — | World Position X | `status.x` direct (float) |
@@ -583,16 +624,31 @@ All states: `read: true`, `write: false`.
 | `profile.firstName` | string | `text` | — | First Name | `profile.firstName` |
 | `profile.lastName` | string | `text` | — | Last Name | `profile.lastName` |
 | `profile.weight` | number | `value` | kg | Weight | `profile.weight / 1000` (stored as grams) |
-| `profile.height` | number | `value` | cm | Height | `profile.height` direct |
+| `profile.height` | number | `value` | cm | Height | `profile.height / 10` (stored as mm) |
 | `profile.age` | number | `value` | — | Age | `profile.age` direct |
 | `profile.male` | boolean | `indicator` | — | Male | `profile.male` direct |
 | `profile.countryCode` | number | `value` | — | Country Code | `profile.countryCode` direct |
-| `profile.totalDistance` | number | `value` | km | Total Distance (all time) | `profile.totalDistance / 100` (stored as m×100?) |
+| `profile.ftp` | number | `value` | W | FTP | `profile.ftp` direct (used for power zone calculation) |
+| `profile.totalDistance` | number | `value` | km | Total Distance (all time) | `profile.totalDistance / 1000` (stored as m) |
 | `profile.totalDistanceClimbed` | number | `value` | m | Total Climbing (all time) | `profile.totalDistanceClimbed` direct |
 | `profile.totalTimeInMinutes` | number | `value` | min | Total Time (all time) | `profile.totalTimeInMinutes` direct |
 | `profile.totalWattHours` | number | `value` | Wh | Total Watt Hours (all time) | `profile.totalWattHours` direct |
 | `profile.totalExperiencePoints` | number | `value` | — | Total XP | `profile.totalExperiencePoints` direct |
+| `profile.targetExperiencePoints` | number | `value` | — | Target XP | `profile.targetExperiencePoints` direct |
 | `profile.achievementLevel` | number | `value` | — | Level | `profile.achievementLevel` direct |
+| `profile.totalGold` | number | `value` | — | Total Drops | `profile.totalGold` direct |
+| `profile.totalInKomJersey` | number | `value` | — | Total in KOM Jersey | `profile.totalInKomJersey` direct |
+| `profile.totalInSprintersJersey` | number | `value` | — | Total in Sprinters Jersey | `profile.totalInSprintersJersey` direct |
+| `profile.totalInOrangeJersey` | number | `value` | — | Total in Orange Jersey | `profile.totalInOrangeJersey` direct |
+| `profile.runAchievementLevel` | number | `value` | — | Run Level | `profile.runAchievementLevel` direct |
+| `profile.totalRunDistance` | number | `value` | km | Total Run Distance | `profile.totalRunDistance` direct |
+| `profile.totalRunTimeInMinutes` | number | `value` | min | Total Run Time | `profile.totalRunTimeInMinutes` direct |
+| `profile.totalRunExperiencePoints` | number | `value` | — | Total Run XP | `profile.totalRunExperiencePoints` direct |
+| `profile.targetRunExperiencePoints` | number | `value` | — | Target Run XP | `profile.targetRunExperiencePoints` direct |
+| `profile.totalRunCalories` | number | `value` | kJ | Total Run Calories | `profile.totalRunCalories` direct |
+| `profile.streaksCurrentLength` | number | `value` | — | Current Streak | `profile.streaksCurrentLength` direct |
+| `profile.streaksMaxLength` | number | `value` | — | Max Streak | `profile.streaksMaxLength` direct |
+| `profile.streaksLastRideTimestamp` | string | `text` | — | Last Ride Timestamp | `profile.streaksLastRideTimestamp` direct |
 | `profile.currentActivityId` | number | `value` | — | Current Activity ID | `profile.currentActivityId` direct |
 | `profile.powerSource` | number | `value` | — | Power Source Type | `profile.powerSource` direct |
 
@@ -653,8 +709,8 @@ npm run test:package   # Package structure tests
 - [ ] `admin/i18n/en.json` has labels for all config fields
 - [ ] `lib/zwiftClient.js` implements auth, token refresh, profile, and rider status
 - [ ] `main.js` validates config, creates states, authenticates, stores profile data, polls, updates rider + profile states, handles unload
-- [ ] All PlayerState fields mapped (power, HR, cadence, speed, distance, altitude, climbing, calories, time, laps, progress, sport, groupId, x, y, heading, lean, watchingRiderId, rideOns, courseId, roadId)
-- [ ] Profile channel with all profile states (id, name, weight, height, age, stats, currentActivityId, etc.)
+- [x] All PlayerState fields mapped (power, powerZone, HR, cadence, speed, distance, altitude, climbing, calories, time, laps, progress, sport, groupId, x, y, heading, lean, watchingRiderId, rideOns, courseId, roadId)
+- [x] Profile channel with all profile states (id, name, weight, height, age, ftp, cycling stats, running stats, jerseys, Drops, streaks, currentActivityId, powerSource)
 - [ ] All states use `ack: true` for API-sourced values
 - [ ] `info.connection` is set to true/false based on API connectivity
 - [ ] Polling timer is cleared in `onUnload`

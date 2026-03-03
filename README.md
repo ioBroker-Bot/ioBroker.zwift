@@ -17,10 +17,12 @@ Polls the Zwift API for live workout data and makes it available as ioBroker sta
 ### Features
 
 - Live rider data updated every 5 seconds (configurable)
-- Zwift profile information (name, weight, height, lifetime stats)
+- Real-time power zone calculation (Coggan 6-zone model, FTP read automatically from your Zwift profile)
+- Comprehensive Zwift profile data: identity, cycling stats, running stats, jerseys, Drops, streaks
 - Connection status indicator (`info.connection`)
 - Automatic token refresh with re-authentication fallback
 - Encrypted credential storage
+- Metadata updates applied automatically on adapter restart (unit corrections, new fields)
 
 ### Configuration
 
@@ -38,16 +40,17 @@ Polls the Zwift API for live workout data and makes it available as ioBroker sta
 |-------|------|-------------|
 | `isRiding` | — | `true` when actively in a Zwift world |
 | `power` | W | Current power output |
+| `powerZone` | — | Current power zone (1-6, Coggan model, see below) |
 | `heartrate` | bpm | Current heart rate |
 | `cadence` | rpm | Current cadence |
 | `speed` | km/h | Current speed |
 | `distance` | km | Distance covered in current activity |
 | `altitude` | m | Current altitude |
 | `climbing` | m | Total elevation gain in current activity |
-| `calories` | kcal | Calories burned |
+| `calories` | kJ | Calories burned (matches Zwift in-game display) |
 | `time` | s | Elapsed ride time |
 | `laps` | — | Laps completed |
-| `progress` | % | Route progress |
+| `progress` | — | Route progress (raw value from Zwift) |
 | `sport` | — | Sport type (0 = cycling) |
 | `groupId` | — | Group/event ID (0 = no group) |
 | `x`, `y` | — | World position coordinates |
@@ -57,6 +60,21 @@ Polls the Zwift API for live workout data and makes it available as ioBroker sta
 | `rideOns` | — | Ride On count |
 | `courseId` | — | Current course ID |
 | `roadId` | — | Current road ID |
+
+#### Power Zones
+
+The `powerZone` state uses the Coggan 6-zone model and is calculated automatically from your current power and FTP. The FTP value is read from your Zwift profile -- no manual configuration is needed.
+
+| Zone | Name | % of FTP |
+|------|------|----------|
+| 1 | Active Recovery | < 55% |
+| 2 | Endurance | 55-75% |
+| 3 | Tempo | 76-90% |
+| 4 | Lactate Threshold | 91-105% |
+| 5 | VO2 Max | 106-120% |
+| 6 | Anaerobic Capacity | > 120% |
+
+If no FTP is set in your Zwift profile, the `powerZone` state will not be updated.
 
 #### Profile Data (fetched once on connect)
 
@@ -70,20 +88,39 @@ Polls the Zwift API for live workout data and makes it available as ioBroker sta
 | `profile.age` | — | Age |
 | `profile.male` | — | Gender indicator |
 | `profile.countryCode` | — | Country code |
+| `profile.ftp` | W | Functional Threshold Power |
 | `profile.totalDistance` | km | All-time distance |
 | `profile.totalDistanceClimbed` | m | All-time elevation gain |
 | `profile.totalTimeInMinutes` | min | All-time ride time |
 | `profile.totalWattHours` | Wh | All-time watt hours |
 | `profile.totalExperiencePoints` | — | Total XP |
+| `profile.targetExperiencePoints` | — | XP needed for next level |
 | `profile.achievementLevel` | — | Current level |
+| `profile.totalGold` | — | Total Drops (in-game currency) |
+| `profile.totalInKomJersey` | — | Times worn KOM jersey |
+| `profile.totalInSprintersJersey` | — | Times worn Sprinters jersey |
+| `profile.totalInOrangeJersey` | — | Times worn Orange jersey |
+| `profile.runAchievementLevel` | — | Current run level |
+| `profile.totalRunDistance` | km | All-time run distance |
+| `profile.totalRunTimeInMinutes` | min | All-time run time |
+| `profile.totalRunExperiencePoints` | — | Total run XP |
+| `profile.targetRunExperiencePoints` | — | Run XP needed for next level |
+| `profile.totalRunCalories` | kJ | All-time run calories |
+| `profile.streaksCurrentLength` | — | Current activity streak length |
+| `profile.streaksMaxLength` | — | Longest activity streak |
+| `profile.streaksLastRideTimestamp` | — | Timestamp of last ride in streak |
 | `profile.currentActivityId` | — | Current activity ID |
 | `profile.powerSource` | — | Power source type |
 
 ### How It Works
 
-The adapter authenticates with the Zwift API using the same endpoint as the Zwift Companion app (`client_id=Zwift_Mobile_Link`). It polls the rider status via the game relay server, decodes the protobuf response, converts raw values to human-readable units, and updates the ioBroker state tree.
+The adapter authenticates with the Zwift API using the same endpoint as the Zwift Companion app (`client_id=Zwift_Mobile_Link`). On startup it fetches your Zwift profile (including FTP) and then polls the rider status via the game relay server, decodes the protobuf response, converts raw values to human-readable units, and updates the ioBroker state tree.
+
+If your profile has an FTP value set, the adapter calculates a live `powerZone` (1-6) on every poll cycle using the Coggan power zone model. No manual FTP configuration is needed.
 
 When you are not actively riding in Zwift, the adapter sets `isRiding` to `false` and continues polling without errors.
+
+**Technical note:** State objects are created using `extendObjectAsync` rather than `setObjectNotExistsAsync`. This means that metadata changes (corrected units, renamed states, new fields) are applied automatically whenever the adapter restarts. You do not need to delete and recreate objects after an update.
 
 ### Smart Home Ideas
 
@@ -91,6 +128,7 @@ With your Zwift data available as ioBroker states, you can create automations th
 
 **Immersive lighting**
 - Change your LED strips or Hue lights based on heart rate zones — blue for recovery, green for endurance, yellow for tempo, red for threshold, flashing red for VO2max
+- Use the `powerZone` state (1-6) to drive color schemes directly — no scripting needed to calculate zones yourself
 - Shift light color with your power output — the harder you push, the more intense the glow
 - Simulate altitude with light brightness — dim as you climb, brighten on descents
 - Flash your room lights when you receive a Ride On
