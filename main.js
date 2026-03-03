@@ -34,6 +34,8 @@ class Zwift extends utils.Adapter {
 			const profile = await this.zwiftClient.getProfile();
 			await this.setStateAsync("info.connection", true, true);
 			this.log.info(`Connected to Zwift as player ${this.zwiftClient.playerId}`);
+			this.log.debug(`Profile keys: ${Object.keys(profile).join(", ")}`);
+			this.log.debug(`Profile JSON: ${JSON.stringify(profile)}`);
 			await this.updateProfileStates(profile);
 		} catch (error) {
 			this.log.error(`Failed to connect to Zwift: ${error.message}`);
