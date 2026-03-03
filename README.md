@@ -169,6 +169,7 @@ With your Zwift data available as ioBroker states, you can create automations th
 	### **WORK IN PROGRESS**
 -->
 ### **WORK IN PROGRESS**
+* Fix ESLint curly and prettier errors for CI
 
 ### 0.1.0 (2026-03-03)
 * Poll Zwift API for live ride data (power, heartrate, cadence, speed, distance, altitude, climbing)
