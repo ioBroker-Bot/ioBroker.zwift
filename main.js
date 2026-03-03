@@ -17,6 +17,7 @@ class Zwift extends utils.Adapter {
 
 		this.zwiftClient = null;
 		this.pollingTimer = null;
+		this.ftp = 0;
 	}
 
 	async onReady() {
@@ -36,6 +37,12 @@ class Zwift extends utils.Adapter {
 			this.log.info(`Connected to Zwift as player ${this.zwiftClient.playerId}`);
 			this.log.debug(`Profile keys: ${Object.keys(profile).join(", ")}`);
 			this.log.debug(`Profile JSON: ${JSON.stringify(profile)}`);
+			this.ftp = profile.ftp || 0;
+			if (this.ftp > 0) {
+				this.log.info(`FTP from Zwift profile: ${this.ftp} W`);
+			} else {
+				this.log.warn("No FTP found in Zwift profile, power zones will not be calculated");
+			}
 			await this.updateProfileStates(profile);
 		} catch (error) {
 			this.log.error(`Failed to connect to Zwift: ${error.message}`);
@@ -78,6 +85,7 @@ class Zwift extends utils.Adapter {
 			{ id: "heading", name: "Heading", type: "number", role: "value", unit: "" },
 			{ id: "lean", name: "Lean Angle", type: "number", role: "value", unit: "" },
 			{ id: "watchingRiderId", name: "Watching Rider ID", type: "number", role: "value", unit: "" },
+			{ id: "powerZone", name: "Power Zone", type: "number", role: "value", unit: "" },
 			{ id: "rideOns", name: "Ride Ons", type: "number", role: "value", unit: "" },
 			{ id: "courseId", name: "Course ID", type: "number", role: "value", unit: "" },
 			{ id: "roadId", name: "Road ID", type: "number", role: "value", unit: "" },
@@ -185,7 +193,20 @@ class Zwift extends utils.Adapter {
 	async updateStates(status) {
 		this.log.debug(`Raw values - distance: ${status.distance}, climbing: ${status.climbing}, progress: ${status.progress}, calories: ${status.calories}`);
 		// Core performance metrics
-		await this.setStateAsync("power", { val: status.power || 0, ack: true });
+		const power = status.power || 0;
+		await this.setStateAsync("power", { val: power, ack: true });
+
+		// Power zone calculation (Coggan 6-zone model)
+		if (this.ftp > 0) {
+			const pctFtp = (power / this.ftp) * 100;
+			let zone = 1;
+			if (pctFtp > 120) zone = 6;
+			else if (pctFtp > 105) zone = 5;
+			else if (pctFtp > 90) zone = 4;
+			else if (pctFtp > 75) zone = 3;
+			else if (pctFtp >= 55) zone = 2;
+			await this.setStateAsync("powerZone", { val: zone, ack: true });
+		}
 		await this.setStateAsync("heartrate", { val: status.heartrate || 0, ack: true });
 		await this.setStateAsync("cadence", { val: Math.round(((status.cadenceUHz || 0) * 60) / 1000000), ack: true });
 		await this.setStateAsync("speed", { val: Math.round(((status.speed || 0) / 1000000) * 10) / 10, ack: true });
