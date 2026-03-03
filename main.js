@@ -145,8 +145,23 @@ class Zwift extends utils.Adapter {
 				role: "value",
 				unit: "Wh",
 			},
+			{ id: "profile.ftp", name: "FTP", type: "number", role: "value", unit: "W" },
 			{ id: "profile.totalExperiencePoints", name: "Total XP", type: "number", role: "value" },
+			{ id: "profile.targetExperiencePoints", name: "Target XP", type: "number", role: "value" },
 			{ id: "profile.achievementLevel", name: "Level", type: "number", role: "value" },
+			{ id: "profile.totalGold", name: "Total Drops", type: "number", role: "value" },
+			{ id: "profile.totalInKomJersey", name: "Total in KOM Jersey", type: "number", role: "value" },
+			{ id: "profile.totalInSprintersJersey", name: "Total in Sprinters Jersey", type: "number", role: "value" },
+			{ id: "profile.totalInOrangeJersey", name: "Total in Orange Jersey", type: "number", role: "value" },
+			{ id: "profile.runAchievementLevel", name: "Run Level", type: "number", role: "value" },
+			{ id: "profile.totalRunDistance", name: "Total Run Distance", type: "number", role: "value", unit: "km" },
+			{ id: "profile.totalRunTimeInMinutes", name: "Total Run Time", type: "number", role: "value", unit: "min" },
+			{ id: "profile.totalRunExperiencePoints", name: "Total Run XP", type: "number", role: "value" },
+			{ id: "profile.targetRunExperiencePoints", name: "Target Run XP", type: "number", role: "value" },
+			{ id: "profile.totalRunCalories", name: "Total Run Calories", type: "number", role: "value", unit: "kJ" },
+			{ id: "profile.streaksCurrentLength", name: "Current Streak", type: "number", role: "value" },
+			{ id: "profile.streaksMaxLength", name: "Max Streak", type: "number", role: "value" },
+			{ id: "profile.streaksLastRideTimestamp", name: "Last Ride Timestamp", type: "string", role: "text" },
 			{ id: "profile.currentActivityId", name: "Current Activity ID", type: "number", role: "value" },
 			{ id: "profile.powerSource", name: "Power Source Type", type: "number", role: "value" },
 		];
@@ -266,11 +281,23 @@ class Zwift extends utils.Adapter {
 		await this.setStateAsync("profile.totalDistanceClimbed", { val: profile.totalDistanceClimbed || 0, ack: true });
 		await this.setStateAsync("profile.totalTimeInMinutes", { val: profile.totalTimeInMinutes || 0, ack: true });
 		await this.setStateAsync("profile.totalWattHours", { val: profile.totalWattHours || 0, ack: true });
-		await this.setStateAsync("profile.totalExperiencePoints", {
-			val: profile.totalExperiencePoints || 0,
-			ack: true,
-		});
+		await this.setStateAsync("profile.ftp", { val: profile.ftp || 0, ack: true });
+		await this.setStateAsync("profile.totalExperiencePoints", { val: profile.totalExperiencePoints || 0, ack: true });
+		await this.setStateAsync("profile.targetExperiencePoints", { val: profile.targetExperiencePoints || 0, ack: true });
 		await this.setStateAsync("profile.achievementLevel", { val: profile.achievementLevel || 0, ack: true });
+		await this.setStateAsync("profile.totalGold", { val: profile.totalGold || 0, ack: true });
+		await this.setStateAsync("profile.totalInKomJersey", { val: profile.totalInKomJersey || 0, ack: true });
+		await this.setStateAsync("profile.totalInSprintersJersey", { val: profile.totalInSprintersJersey || 0, ack: true });
+		await this.setStateAsync("profile.totalInOrangeJersey", { val: profile.totalInOrangeJersey || 0, ack: true });
+		await this.setStateAsync("profile.runAchievementLevel", { val: profile.runAchievementLevel || 0, ack: true });
+		await this.setStateAsync("profile.totalRunDistance", { val: profile.totalRunDistance || 0, ack: true });
+		await this.setStateAsync("profile.totalRunTimeInMinutes", { val: profile.totalRunTimeInMinutes || 0, ack: true });
+		await this.setStateAsync("profile.totalRunExperiencePoints", { val: profile.totalRunExperiencePoints || 0, ack: true });
+		await this.setStateAsync("profile.targetRunExperiencePoints", { val: profile.targetRunExperiencePoints || 0, ack: true });
+		await this.setStateAsync("profile.totalRunCalories", { val: profile.totalRunCalories || 0, ack: true });
+		await this.setStateAsync("profile.streaksCurrentLength", { val: profile.streaksCurrentLength || 0, ack: true });
+		await this.setStateAsync("profile.streaksMaxLength", { val: profile.streaksMaxLength || 0, ack: true });
+		await this.setStateAsync("profile.streaksLastRideTimestamp", { val: profile.streaksLastRideTimestamp || "", ack: true });
 		await this.setStateAsync("profile.currentActivityId", { val: profile.currentActivityId || 0, ack: true });
 		await this.setStateAsync("profile.powerSource", { val: profile.powerSource || 0, ack: true });
 	}
