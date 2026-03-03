@@ -168,7 +168,7 @@ With your Zwift data available as ioBroker states, you can create automations th
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.1.0 (2026-03-03)
 * Poll Zwift API for live ride data (power, heartrate, cadence, speed, distance, altitude, climbing)
 * Zwift profile data (FTP, weight, height, level, total stats)
 * Power zone calculation based on FTP (Coggan 6-zone model)

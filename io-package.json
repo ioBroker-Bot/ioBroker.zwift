@@ -1,113 +1,130 @@
 {
-	"common": {
-		"name": "zwift",
-		"version": "0.0.1",
-		"news": {
-			"0.0.1": {
-				"en": "initial release",
-				"de": "Erstveröffentlichung",
-				"ru": "Начальная версия",
-				"pt": "lançamento inicial",
-				"nl": "Eerste uitgave",
-				"fr": "Première version",
-				"it": "Versione iniziale",
-				"es": "Versión inicial",
-				"pl": "Pierwsze wydanie",
-				"uk": "Початкова версія",
-				"zh-cn": "首次出版"
-			}
-		},
-		"titleLang": {
-			"en": "zwift",
-			"de": "zwift",
-			"ru": "Цвифт",
-			"pt": "zwift",
-			"nl": "zwift",
-			"fr": "zwift",
-			"it": "zwift",
-			"es": "zwift",
-			"pl": "zwift",
-			"uk": "zwift",
-			"zh-cn": "兹维夫特"
-		},
-		"desc": {
-			"en": "your zwift live training data in iobroker",
-			"de": "Ihre Zwift-Live-Trainingsdaten in iobroker",
-			"ru": "ваши данные обучения zwift в реальном времени в iobroker",
-			"pt": "seus dados de treinamento do zwift live no iobroker",
-			"nl": "uw zwift live trainingsgegevens in iobroker",
-			"fr": "vos données d'entraînement en direct zwift dans iobroker",
-			"it": "i tuoi dati di allenamento zwift live in iobroker",
-			"es": "tus datos de entrenamiento en vivo de zwift en iobroker",
-			"pl": "Twoje dane treningowe Zwift na żywo w iobrokerze",
-			"uk": "ваші дані навчання zwift live в iobroker",
-			"zh-cn": "您在 iobroker 中的 zwift 实时训练数据"
-		},
-		"authors": [
-			"Flixhummel <hummelimages@googlemail.com>"
-		],
-		"keywords": [
-			"zwift training live data"
-		],
-		"licenseInformation": {
-			"type": "free",
-			"license": "MIT"
-		},
-		"platform": "Javascript/Node.js",
-		"icon": "zwift.png",
-		"enabled": true,
-		"extIcon": "https://raw.githubusercontent.com/Flixhummel/ioBroker.zwift/main/admin/zwift.png",
-		"readme": "https://github.com/Flixhummel/ioBroker.zwift/blob/main/README.md",
-		"loglevel": "info",
-		"tier": 3,
-		"mode": "daemon",
-		"type": "health",
-		"compact": true,
-		"connectionType": "cloud",
-		"dataSource": "poll",
-		"adminUI": {
-			"config": "json"
-		},
-		"dependencies": [
-			{
-				"js-controller": ">=6.0.11"
-			}
-		],
-		"globalDependencies": [
-			{
-				"admin": ">=7.6.20"
-			}
-		]
-	},
-	"native": {
-		"username": "",
-		"password": "",
-		"pollingInterval": 5
-	},
-	"encryptedNative": ["password"],
-	"protectedNative": ["password"],
-	"objects": [],
-	"instanceObjects": [
-		{
-			"_id": "info",
-			"type": "channel",
-			"common": {
-				"name": "Information"
-			},
-			"native": {}
-		},
-		{
-			"_id": "info.connection",
-			"type": "state",
-			"common": {
-				"role": "indicator.connected",
-				"name": "Device or service connected",
-				"type": "boolean",
-				"read": true,
-				"write": false,
-				"def": false
-			},
-			"native": {}
-		}
-	]
+  "common": {
+    "name": "zwift",
+    "version": "0.1.0",
+    "news": {
+      "0.1.0": {
+        "en": "Poll Zwift API for live ride data (power, heartrate, cadence, speed, distance, altitude, climbing)\nZwift profile data (FTP, weight, height, level, total stats)\nPower zone calculation based on FTP (Coggan 6-zone model)\nConfigurable polling interval",
+        "de": "Poll Zwift API für Live-Ride-Daten (Strom, Herzfrequenz, Kadenz, Geschwindigkeit, Entfernung, Höhe, Klettern)\nZwift-Profildaten (FTP, Gewicht, Höhe, Ebene, Gesamtstaten)\nBerechnung der Stromzone basierend auf FTP (Coggan 6-Zonen-Modell)\nKonfigurierbares Abfrageintervall",
+        "ru": "Опрос Zwift API для данных о поездках в реальном времени (мощность, сердцебиение, каденция, скорость, расстояние, высота, подъем)\nДанные профиля Zwift (FTP, вес, рост, уровень, общая статистика)\nРасчет зоны электропитания на основе FTP (модель Coggan 6-zone)\nКонфигурируемый интервал опроса",
+        "pt": "Poll Zwift API para dados de passeio ao vivo (potência, ritmo cardíaco, cadência, velocidade, distância, altitude, escalada)\nDados do perfil Zwift (FTP, peso, altura, nível, estatísticas totais)\nCálculo da zona de potência com base no FTP (modelo Coggan 6-zona)\nIntervalo de votação configurável",
+        "nl": "Poll Zwift API voor live ritgegevens (kracht, hartslag, cadans, snelheid, afstand, hoogte, klimmen)\nZwift profielgegevens (FTP, gewicht, hoogte, niveau, totale statistieken)\nEnergiezoneberekening op basis van FTP (Coggan 6-zonemodel)\nConfigureerbare peilingsinterval",
+        "fr": "API Poll Zwift pour données de trajet en direct (puissance, rythme cardiaque, cadence, vitesse, distance, altitude, escalade)\nDonnées du profil Zwift (FTP, poids, taille, niveau, statistiques totales)\nCalcul de la zone de puissance basé sur FTP (modèle Coggan 6 zones)\nIntervalle de vote configurable",
+        "it": "Poll Zwift API per dati live ride (potere, frequenza cardiaca, cadenza, velocità, distanza, altitudine, arrampicata)\nDati del profilo Zwift (FTP, peso, altezza, livello, statistiche totali)\nCalcolo della zona di potenza basato su FTP (modello Coggan 6 zone)\nIntervallo configurabile",
+        "es": "Poll Zwift API para datos de viaje en vivo (poder, corazón, cadencia, velocidad, distancia, altitud, escalada)\nDatos de perfil Zwift (FTP, peso, altura, nivel, estadísticas totales)\nCálculo de la zona de energía basado en FTP (modelo de 6 zonas de Coggan)\nIntervalo de votación configurable",
+        "pl": "Polil Zwift API dla danych z jazdy na żywo (moc, karawan, kadencja, prędkość, odległość, wysokość, wspinaczka)\nDane profilu Zwift (FTP, waga, wysokość, poziom, całkowite statystyki)\nObliczanie strefy energetycznej oparte na FTP (model strefy Coggan 6)\nKonfigurowalny interwał wyborczy",
+        "uk": "Poll Zwift API для живих даних проїзду (потужність, серцетат, швидкість, відстань, висота, скелелазіння)\nДані профілю Zwift (FTP, вага, висота, рівень, загальна статистика)\nРозрахунок зони живлення на основі моделі FTP (Coggan 6-зону)\nКонфігурація інтервалу опитування",
+        "zh-cn": "Poll Zwift API用于实时乘车数据(功率,心率,cadence,速度,距离,高度,攀登)\nZwift 剖面图数据( FTP, 重量, 高度, 水平, 总数据)\n基于FTP(Coggan 6区模型)的电源区计算\n可配置的投票间隔"
+      },
+      "0.0.1": {
+        "en": "initial release",
+        "de": "Erstveröffentlichung",
+        "ru": "Начальная версия",
+        "pt": "lançamento inicial",
+        "nl": "Eerste uitgave",
+        "fr": "Première version",
+        "it": "Versione iniziale",
+        "es": "Versión inicial",
+        "pl": "Pierwsze wydanie",
+        "uk": "Початкова версія",
+        "zh-cn": "首次出版"
+      }
+    },
+    "titleLang": {
+      "en": "zwift",
+      "de": "zwift",
+      "ru": "Цвифт",
+      "pt": "zwift",
+      "nl": "zwift",
+      "fr": "zwift",
+      "it": "zwift",
+      "es": "zwift",
+      "pl": "zwift",
+      "uk": "zwift",
+      "zh-cn": "兹维夫特"
+    },
+    "desc": {
+      "en": "your zwift live training data in iobroker",
+      "de": "Ihre Zwift-Live-Trainingsdaten in iobroker",
+      "ru": "ваши данные обучения zwift в реальном времени в iobroker",
+      "pt": "seus dados de treinamento do zwift live no iobroker",
+      "nl": "uw zwift live trainingsgegevens in iobroker",
+      "fr": "vos données d'entraînement en direct zwift dans iobroker",
+      "it": "i tuoi dati di allenamento zwift live in iobroker",
+      "es": "tus datos de entrenamiento en vivo de zwift en iobroker",
+      "pl": "Twoje dane treningowe Zwift na żywo w iobrokerze",
+      "uk": "ваші дані навчання zwift live в iobroker",
+      "zh-cn": "您在 iobroker 中的 zwift 实时训练数据"
+    },
+    "authors": [
+      "Flixhummel <hummelimages@googlemail.com>"
+    ],
+    "keywords": [
+      "zwift training live data"
+    ],
+    "licenseInformation": {
+      "type": "free",
+      "license": "MIT"
+    },
+    "platform": "Javascript/Node.js",
+    "icon": "zwift.png",
+    "enabled": true,
+    "extIcon": "https://raw.githubusercontent.com/Flixhummel/ioBroker.zwift/main/admin/zwift.png",
+    "readme": "https://github.com/Flixhummel/ioBroker.zwift/blob/main/README.md",
+    "loglevel": "info",
+    "tier": 3,
+    "mode": "daemon",
+    "type": "health",
+    "compact": true,
+    "connectionType": "cloud",
+    "dataSource": "poll",
+    "adminUI": {
+      "config": "json"
+    },
+    "dependencies": [
+      {
+        "js-controller": ">=6.0.11"
+      }
+    ],
+    "globalDependencies": [
+      {
+        "admin": ">=7.6.20"
+      }
+    ]
+  },
+  "native": {
+    "username": "",
+    "password": "",
+    "pollingInterval": 5
+  },
+  "encryptedNative": [
+    "password"
+  ],
+  "protectedNative": [
+    "password"
+  ],
+  "objects": [],
+  "instanceObjects": [
+    {
+      "_id": "info",
+      "type": "channel",
+      "common": {
+        "name": "Information"
+      },
+      "native": {}
+    },
+    {
+      "_id": "info.connection",
+      "type": "state",
+      "common": {
+        "role": "indicator.connected",
+        "name": "Device or service connected",
+        "type": "boolean",
+        "read": true,
+        "write": false,
+        "def": false
+      },
+      "native": {}
+    }
+  ]
 }

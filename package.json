@@ -1,6 +1,6 @@
 {
   "name": "iobroker.zwift",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "your zwift live training data in iobroker",
   "author": {
     "name": "Flixhummel",
