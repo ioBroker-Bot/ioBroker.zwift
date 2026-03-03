@@ -65,7 +65,7 @@ class Zwift extends utils.Adapter {
 			{ id: "distance", name: "Distance", type: "number", role: "value.distance", unit: "km" },
 			{ id: "altitude", name: "Altitude", type: "number", role: "value.gps.elevation", unit: "m" },
 			{ id: "climbing", name: "Total Climbing", type: "number", role: "value", unit: "m" },
-			{ id: "calories", name: "Calories", type: "number", role: "value", unit: "kcal" },
+			{ id: "calories", name: "Calories", type: "number", role: "value", unit: "kJ" },
 			{ id: "time", name: "Ride Time", type: "number", role: "value", unit: "s" },
 			{ id: "laps", name: "Laps Completed", type: "number", role: "value", unit: "" },
 			{ id: "progress", name: "Route Progress", type: "number", role: "value", unit: "" },
@@ -82,7 +82,7 @@ class Zwift extends utils.Adapter {
 		];
 
 		for (const s of riderStates) {
-			await this.setObjectNotExistsAsync(s.id, {
+			await this.extendObjectAsync(s.id, {
 				type: "state",
 				common: {
 					name: s.name,
@@ -142,7 +142,7 @@ class Zwift extends utils.Adapter {
 		];
 
 		for (const s of profileStates) {
-			await this.setObjectNotExistsAsync(s.id, {
+			await this.extendObjectAsync(s.id, {
 				type: "state",
 				common: {
 					name: s.name,
