@@ -25,7 +25,7 @@
 		"pollingInterval": {
 			"type": "number",
 			"label": "pollingInterval",
-			"min": 3,
+			"min": 5,
 			"max": 300,
 			"newLine": true,
 			"xs": 12,

@@ -3,6 +3,10 @@
 const utils = require("@iobroker/adapter-core");
 const ZwiftClient = require("./lib/zwiftClient");
 
+const INITIAL_RETRY_DELAY = 10000; // 10 seconds
+const MAX_RETRY_DELAY = 300000; // 5 minutes
+const RETRY_BACKOFF_FACTOR = 2;
+
 class Zwift extends utils.Adapter {
 	/**
 	 * @param {Partial<utils.AdapterOptions>} [options]
@@ -16,7 +20,10 @@ class Zwift extends utils.Adapter {
 		this.on("unload", this.onUnload.bind(this));
 
 		this.zwiftClient = null;
-		this.pollingTimer = null;
+		this.pollingTimeout = null;
+		this.pollingInterval = 0;
+		this.retryTimeout = null;
+		this.retryDelay = INITIAL_RETRY_DELAY;
 		this.ftp = 0;
 	}
 
@@ -29,7 +36,15 @@ class Zwift extends utils.Adapter {
 		await this.createStates();
 
 		this.zwiftClient = new ZwiftClient(this.config.username, this.config.password, this.log);
+		this.pollingInterval = Math.max(5, this.config.pollingInterval || 5) * 1000;
 
+		await this.connectWithRetry();
+	}
+
+	async connectWithRetry() {
+		if (!this.zwiftClient) {
+			return;
+		}
 		try {
 			await this.zwiftClient.authenticate();
 			const profile = await this.zwiftClient.getProfile();
@@ -42,15 +57,27 @@ class Zwift extends utils.Adapter {
 				this.log.warn("No FTP found in Zwift profile, power zones will not be calculated");
 			}
 			await this.updateProfileStates(profile);
+			this.retryDelay = INITIAL_RETRY_DELAY;
+			await this.pollZwift();
+			this.schedulePoll();
 		} catch (error) {
 			this.log.error(`Failed to connect to Zwift: ${error.message}`);
 			await this.setStateAsync("info.connection", false, true);
-			return;
+			this.log.info(`Retrying in ${this.retryDelay / 1000} seconds...`);
+			this.retryTimeout = this.setTimeout(() => this.connectWithRetry(), this.retryDelay);
+			this.retryDelay = Math.min(this.retryDelay * RETRY_BACKOFF_FACTOR, MAX_RETRY_DELAY);
 		}
+	}
 
-		await this.pollZwift();
-		const interval = Math.max(3, this.config.pollingInterval || 5) * 1000;
-		this.pollingTimer = this.setInterval(() => this.pollZwift(), interval);
+	schedulePoll() {
+		this.pollingTimeout = this.setTimeout(async () => {
+			try {
+				await this.pollZwift();
+			} catch (error) {
+				this.log.error(`Unexpected polling error: ${error.message}`);
+			}
+			this.schedulePoll();
+		}, this.pollingInterval);
 	}
 
 	async createStates() {
@@ -331,9 +358,13 @@ class Zwift extends utils.Adapter {
 	 */
 	onUnload(callback) {
 		try {
-			if (this.pollingTimer) {
-				this.clearInterval(this.pollingTimer);
-				this.pollingTimer = null;
+			if (this.pollingTimeout) {
+				this.clearTimeout(this.pollingTimeout);
+				this.pollingTimeout = null;
+			}
+			if (this.retryTimeout) {
+				this.clearTimeout(this.retryTimeout);
+				this.retryTimeout = null;
 			}
 			this.setState("info.connection", false, true);
 			callback();

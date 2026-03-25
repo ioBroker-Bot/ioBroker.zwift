@@ -1,5 +1,5 @@
 {
-	"username": "Zwift E-Mail",
 	"password": "Zwift Passwort",
-	"pollingInterval": "Abfrageintervall (Sekunden)"
+	"pollingInterval": "Abfrageintervall (Sekunden)",
+	"username": "Zwift E-Mail"
 }

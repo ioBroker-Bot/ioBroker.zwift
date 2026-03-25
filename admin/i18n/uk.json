@@ -1,5 +1,5 @@
 {
-	"username": "Zwift Email",
-	"password": "Zwift Password",
-	"pollingInterval": "Polling Interval (seconds)"
+	"password": "Пароль Zwift",
+	"pollingInterval": "Інтервал опитування (секунди)",
+	"username": "Електронна пошта Zwift"
 }
